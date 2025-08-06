@@ -91,7 +91,7 @@ async function fetchStockData() {
   try {
     const startTime = new Date();
     console.log(`[${startTime.toLocaleTimeString()}] Starting 15 second delay before fetching stock data...`);
-    await new Promise(resolve => setTimeout(resolve, 15000));
+    await new Promise(resolve => setTimeout(resolve, 10000));
     console.log(`[${new Date().toLocaleTimeString()}] Delay complete, now fetching stock data...`);
     const newStockData = await getAllStockData();
     
