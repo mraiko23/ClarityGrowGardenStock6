@@ -19,7 +19,7 @@ async function fetchGamersbergStock() {
           'Referer': 'https://www.gamersberg.com/',
           'Origin': 'https://www.gamersberg.com'
         },
-        timeout: 15000
+        timeout: 10000
       });
 
       const responseData = response.data;
@@ -153,26 +153,38 @@ function normalizeStockData(data) {
 // Main function to get all stock data from Gamersberg API
 async function getAllStockData() {
   try {
-    console.log('Fetching stock data from Gamersberg API...');
-    
-    // Fetch from Gamersberg API (only source)
-    const gamersbergData = await fetchGamersbergStock();
-    
-    if (gamersbergData) {
-      // Normalize and return data
-      const normalizedData = normalizeStockData(gamersbergData);
-      
-      console.log('New stock data detected:', normalizedData);
-      return normalizedData;
-    } else {
-      console.log('No data available from Gamersberg API - returning empty data');
-      return {
-        seeds: [],
-        gear: [],
-        eggs: []
-      };
+    const maxImmediateRetries = 3;
+    let attempt = 0;
+    let normalizedData = null;
+    while (attempt < maxImmediateRetries) {
+      attempt++;
+      console.log(`Fetching stock data from Gamersberg API (logic-level attempt ${attempt}/${maxImmediateRetries})...`);
+      const gamersbergData = await fetchGamersbergStock();
+      if (gamersbergData) {
+        normalizedData = normalizeStockData(gamersbergData);
+        const totalSeeds = normalizedData.seeds.reduce((sum, item) => sum + item.quantity, 0);
+        const totalGear = normalizedData.gear.reduce((sum, item) => sum + item.quantity, 0);
+        const totalEggs = normalizedData.eggs.reduce((sum, item) => sum + item.quantity, 0);
+        console.log(`Stock counts - Seeds: ${totalSeeds}, Gear: ${totalGear}, Eggs: ${totalEggs}`);
+        if (totalSeeds === 0 && totalGear === 0 && totalEggs === 0) {
+          console.log('All stock counts are zero, retrying immediately...');
+          continue;
+        } else {
+          console.log('New stock data detected:', normalizedData);
+          return normalizedData;
+        }
+      } else {
+        console.log('No data available from Gamersberg API - retrying immediately...');
+        continue;
+      }
     }
-    
+    // If we reach here, all attempts failed or all were empty
+    console.log('No valid stock data after immediate retries - returning empty data');
+    return {
+      seeds: [],
+      gear: [],
+      eggs: []
+    };
   } catch (error) {
     console.error('Error getting stock data:', error.message);
     return {
